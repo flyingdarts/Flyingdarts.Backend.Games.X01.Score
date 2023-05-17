@@ -25,15 +25,15 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
         var socketMessage = new SocketMessage<CreateX01ScoreCommand>();
         socketMessage.Message = request;
         socketMessage.Action = "v2/games/x01/score";
-
-        if (await GetGame(request.GameId) == null)
+        var gameId = long.Parse(request.GameId);
+        if (await GetGame(gameId) == null)
             return new APIGatewayProxyResponse
             {
                 StatusCode = 200,
                 Body = JsonSerializer.Serialize(socketMessage)
             };
 
-        var gameDart = GameDart.Create(request.GameId, request.PlayerId, request.Score, request.Input);
+        var gameDart = GameDart.Create(gameId, request.PlayerId, request.Score, request.Input);
         var write = _dbContext.CreateBatchWrite<GameDart>(_applicationOptions.ToOperationConfig());
         write.AddPutItem(gameDart);
         await write.ExecuteAsync(cancellationToken);

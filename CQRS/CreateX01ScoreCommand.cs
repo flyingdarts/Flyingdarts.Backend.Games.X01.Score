@@ -4,7 +4,7 @@ using MediatR;
 
 public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
 {
-    public long GameId { get; set; }
+    public string GameId { get; set; }
     public Guid PlayerId { get; set; }
     public int Score { get; set; }
     public int Input { get; set; }
