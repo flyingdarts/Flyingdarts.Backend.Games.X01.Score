@@ -15,7 +15,7 @@
 	  <PackageReference Include="Amazon.Lambda.RuntimeSupport" Version="1.8.7" />
 	  <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.3.1" />
 	  <PackageReference Include="Amazon.Extensions.Configuration.SystemsManager" Version="5.0.3" />
-	  <PackageReference Include="Flyingdarts.Backend.Shared" Version="1.0.0.7" />
+	  <PackageReference Include="Flyingdarts.Backend.Shared" Version="1.1.0" />
 	  <PackageReference Include="Flyingdarts.Persistence" Version="1.1.1" />
 	  <PackageReference Include="Flyingdarts.Shared" Version="1.0.2.8" />
 	  <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0-preview.4.23259.5" />
