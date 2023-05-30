@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using FluentValidation;
 using Flyingdarts.Shared;
 using Microsoft.Extensions.Configuration;
+using Amazon.ApiGatewayManagementApi;
 
 /// <summary>
 /// Factory class for creating the service provider.
@@ -40,6 +41,16 @@ public static class ServiceFactory
         // Register MediatR and register services from the assembly containing CreateX01ScoreCommand.
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateX01ScoreCommand).Assembly));
 
+        // Api Gateway Client.
+        services.AddTransient<IAmazonApiGatewayManagementApi>(provider =>
+        {
+            var config = new AmazonApiGatewayManagementApiConfig
+            {
+                ServiceURL = System.Environment.GetEnvironmentVariable("WebSocketApiUrl")!
+            };
+
+            return new AmazonApiGatewayManagementApiClient(config);
+        });
         // Build and return the service provider.
         return services.BuildServiceProvider();
     }
