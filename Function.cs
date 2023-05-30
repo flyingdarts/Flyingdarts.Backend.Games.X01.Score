@@ -17,7 +17,7 @@ var handler = async (APIGatewayProxyRequest request) =>
 {
     // Convert the APIGatewayProxyRequest to the specified CreateX01ScoreCommand type using the serializer
     var socketRequest = request.To<CreateX01ScoreCommand>(serializer);
-
+    socketRequest.Message.ConnectionId = request.RequestContext.ConnectionId;
     // Handle the socketRequest using the innerHandler
     return await innerHandler.Handle(socketRequest);
 };
