@@ -24,6 +24,5 @@ public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
 
 public class ScoreboardRecord
 {
-    public int Score { get; set; }
     public List<int> History { get; set; }
 }
