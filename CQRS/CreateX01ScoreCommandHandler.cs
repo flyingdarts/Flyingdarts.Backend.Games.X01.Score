@@ -35,6 +35,8 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
 
         var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score);
 
+        request.Darts.Add(gameDart);
+        
         var write = _dbContext.CreateBatchWrite<GameDart>(_applicationOptions.ToOperationConfig());
 
         write.AddPutItem(gameDart);
