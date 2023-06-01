@@ -7,8 +7,8 @@ using Amazon.DynamoDBv2.DocumentModel;
 using Flyingdarts.Persistence;
 using Flyingdarts.Shared;
 using MediatR.Pipeline;
-
-public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, ApplicationOptions ApplicationOptions) : IRequestPreProcessor<CreateX01ScoreCommand>
+using Microsoft.Extensions.Options;
+public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, IOptions<ApplicationOptions> ApplicationOptions) : IRequestPreProcessor<CreateX01ScoreCommand>
 {
     public async Task Process(CreateX01ScoreCommand request, CancellationToken cancellationToken)
     {
@@ -20,21 +20,21 @@ public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, Appli
 
     private async Task<Game> GetGameAsync(long gameId, CancellationToken cancellationToken)
     {
-        var games = await DbContext.FromQueryAsync<Game>(QueryGameConfig(gameId.ToString()), ApplicationOptions.ToOperationConfig())
+        var games = await DbContext.FromQueryAsync<Game>(QueryGameConfig(gameId.ToString()), ApplicationOptions.Value.ToOperationConfig())
             .GetRemainingAsync(cancellationToken);
         return games.Where(x => x.Status == GameStatus.Qualifying).ToList().Single();
     }
 
     private async Task<List<GamePlayer>> GetGamePlayersAsync(long gameId, CancellationToken cancellationToken)
     {
-        var gamePlayers = await DbContext.FromQueryAsync<GamePlayer>(QueryGamePlayersConfig(gameId.ToString()), ApplicationOptions.ToOperationConfig())
+        var gamePlayers = await DbContext.FromQueryAsync<GamePlayer>(QueryGamePlayersConfig(gameId.ToString()), ApplicationOptions.Value.ToOperationConfig())
             .GetRemainingAsync(cancellationToken);
         return gamePlayers.ToList();
     }
 
     private async Task<List<GameDart>> GetGameDartsAsync(long gameId, CancellationToken cancellationToken)
     {
-        var gameDarts = await DbContext.FromQueryAsync<GameDart>(QueryGameDartsConfig(gameId.ToString()), ApplicationOptions.ToOperationConfig())
+        var gameDarts = await DbContext.FromQueryAsync<GameDart>(QueryGameDartsConfig(gameId.ToString()), ApplicationOptions.Value.ToOperationConfig())
             .GetRemainingAsync(cancellationToken);
         return gameDarts.ToList();
     }
@@ -44,7 +44,7 @@ public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, Appli
         List<User> users = new List<User>();
         for (var i = 0; i < userIds.Length; i++)
         {
-            var resultSet = await DbContext.FromQueryAsync<User>(QueryUserConfig(userIds[i]), ApplicationOptions.ToOperationConfig()).GetRemainingAsync(cancellationToken);
+            var resultSet = await DbContext.FromQueryAsync<User>(QueryUserConfig(userIds[i]), ApplicationOptions.Value.ToOperationConfig()).GetRemainingAsync(cancellationToken);
             var user = resultSet.Single();
             users.Add(user);
         }
