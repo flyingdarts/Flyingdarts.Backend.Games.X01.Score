@@ -36,12 +36,20 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
         var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score);
 
         request.Darts.Add(gameDart);
+        request.History = new();
+        request.Players.ForEach(p =>
+        {
+            request.History.Add(p.PlayerId, new());
+            request.History[p.PlayerId].Score = request.Darts.OrderByDescending(x => x.CreatedAt).First().GameScore;
+            request.History[p.PlayerId].History = request.Darts.OrderBy(x => x.CreatedAt).Where(x => x.PlayerId == p.PlayerId).Select(x => x.Score).ToList();
+        });
         
         var write = _dbContext.CreateBatchWrite<GameDart>(_applicationOptions.ToOperationConfig());
 
         write.AddPutItem(gameDart);
 
         await write.ExecuteAsync(cancellationToken);
+
 
         return new APIGatewayProxyResponse
         {

@@ -36,14 +36,6 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
 
         public async Task Process(CreateX01ScoreCommand request, APIGatewayProxyResponse response, CancellationToken cancellationToken)
         {        
-            request.History = new();
-            request.Players.ForEach(p =>
-            {
-                request.History.Add(p.PlayerId, new());
-                request.History[p.PlayerId].Score = request.Darts.OrderByDescending(x=>x.CreatedAt).First().GameScore;
-                request.History[p.PlayerId].History = request.Darts.OrderBy(x=>x.CreatedAt).Where(x=>x.PlayerId == p.PlayerId).Select(x=> x.Score).ToList();
-            });
-
             var socketMessage = new SocketMessage<CreateX01ScoreCommand> 
             { 
                 Message = request,
