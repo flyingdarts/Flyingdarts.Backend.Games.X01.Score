@@ -41,7 +41,7 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
             {
                 request.History.Add(p.PlayerId, new());
                 request.History[p.PlayerId].Score = request.Darts.OrderByDescending(x=>x.CreatedAt).First().GameScore;
-                request.History[p.PlayerId].History.AddRange(request.Darts.OrderBy(x=>x.CreatedAt).Where(x=>x.PlayerId == p.PlayerId).Select(x=> x.Score));
+                request.History[p.PlayerId].History = request.Darts.OrderBy(x=>x.CreatedAt).Where(x=>x.PlayerId == p.PlayerId).Select(x=> x.Score).ToList();
             });
 
             var socketMessage = new SocketMessage<CreateX01ScoreCommand> 
