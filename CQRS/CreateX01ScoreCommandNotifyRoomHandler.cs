@@ -35,10 +35,14 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
         }
 
         public async Task Process(CreateX01ScoreCommand request, APIGatewayProxyResponse response, CancellationToken cancellationToken)
-        {
-            var players = await GetGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
-            var users = await GetUsersWithIds(players.Select(x => x.PlayerId).ToArray());
-        
+        {        
+            request.History = new();
+            request.Players.ForEach(p =>
+            {
+                request.History.Add(p, new());
+                request.History[p].AddRange(request.Darts.Where(d => d.PlayerId == p.PlayerId));
+            });
+            
             var socketMessage = new SocketMessage<CreateX01ScoreCommand> 
             { 
                 Message = request,
@@ -47,7 +51,7 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
 
             var stream = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(socketMessage)));
 
-            foreach (var user in users)
+            foreach (var user in request.Users)
             {
                 if (!string.IsNullOrEmpty(user.ConnectionId))
                 {
@@ -67,18 +71,6 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
             }
         }
 
-        private async Task<List<User>> GetUsersWithIds(string[] userIds)
-        {
-            List<User> users = new List<User>();
-            for (var i = 0; i < userIds.Length; i++)
-            {
-                var resultSet = await _dbContext.FromQueryAsync<User>(QueryUserConfig(userIds[i]), _applicationOptions.ToOperationConfig()).GetRemainingAsync();
-                var user = resultSet.Single();
-                users.Add(user);
-            }
-            return users;
-        }
-
         private async Task<List<GamePlayer>> GetGamePlayersAsync(long gameId, CancellationToken cancellationToken)
         {
             var gamePlayers = await _dbContext.FromQueryAsync<GamePlayer>(QueryConfig(gameId.ToString()), _applicationOptions.ToOperationConfig())
@@ -93,11 +85,6 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
             return new QueryOperationConfig { Filter = queryFilter };
         }
 
-        private static QueryOperationConfig QueryUserConfig(string userId)
-        {
-            var queryFilter = new QueryFilter("PK", QueryOperator.Equal, Constants.User);
-            queryFilter.AddCondition("SK", QueryOperator.BeginsWith, userId);
-            return new QueryOperationConfig { Filter = queryFilter };
-        }
+
     }
 }

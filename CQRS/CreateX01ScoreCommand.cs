@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using Amazon.Lambda.APIGatewayEvents;
+using Flyingdarts.Persistence;
 using MediatR;
 
 public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
@@ -10,4 +12,10 @@ public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
     public int Input { get; set; }
 
     internal string ConnectionId { get; set; }
+    internal Game Game { get; set; }
+    internal List<GamePlayer> Players { get; set; }
+    internal List<GameDart> Darts { get; set; }
+    internal List<User> Users { get; set; }
+
+    public Dictionary<GamePlayer, List<GameDart>> History { get; set; }
 }

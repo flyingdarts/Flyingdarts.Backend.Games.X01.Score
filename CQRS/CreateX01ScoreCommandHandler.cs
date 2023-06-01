@@ -25,17 +25,21 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
         var socketMessage = new SocketMessage<CreateX01ScoreCommand>();
         socketMessage.Message = request;
         socketMessage.Action = "v2/games/x01/score";
-        var gameId = long.Parse(request.GameId);
-        if (await GetGame(gameId) == null)
+
+        if (request.Game == null)
             return new APIGatewayProxyResponse
             {
                 StatusCode = 200,
                 Body = JsonSerializer.Serialize(socketMessage)
             };
 
-        var gameDart = GameDart.Create(gameId, request.PlayerId, request.Score, request.Input);
+        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Score, request.Input);
+
+
         var write = _dbContext.CreateBatchWrite<GameDart>(_applicationOptions.ToOperationConfig());
+
         write.AddPutItem(gameDart);
+
         await write.ExecuteAsync(cancellationToken);
 
         return new APIGatewayProxyResponse
@@ -43,19 +47,5 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
             StatusCode = 200,
             Body = JsonSerializer.Serialize(socketMessage)
         };
-    }
-    private async Task<Game> GetGame(long gameId)
-    {
-        var result = await _dbContext.FromQueryAsync<Game>(
-                X01GamesQueryConfig(gameId),
-                _applicationOptions.ToOperationConfig())
-            .GetRemainingAsync(CancellationToken.None);
-        return result.SingleOrDefault();
-    }
-    private static QueryOperationConfig X01GamesQueryConfig(long gameId)
-    {
-        var queryFilter = new QueryFilter("PK", QueryOperator.Equal, Constants.Game);
-        queryFilter.AddCondition("SK", QueryOperator.BeginsWith, $"{gameId}#");
-        return new QueryOperationConfig { Filter = queryFilter };
     }
 }
