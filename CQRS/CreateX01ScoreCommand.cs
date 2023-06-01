@@ -17,5 +17,5 @@ public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
     internal List<GameDart> Darts { get; set; }
     internal List<User> Users { get; set; }
 
-    public Dictionary<GamePlayer, List<GameDart>> History { get; set; }
+    public Dictionary<string, List<GameDart>> History { get; set; }
 }

@@ -39,10 +39,10 @@ namespace Flyingdarts.Backend.Games.X01.Join.CQRS
             request.History = new();
             request.Players.ForEach(p =>
             {
-                request.History.Add(p, new());
-                request.History[p].AddRange(request.Darts.Where(d => d.PlayerId == p.PlayerId));
+                request.History.Add(p.PlayerId, new());
+                request.History[p.PlayerId].AddRange(request.Darts.Where(d => d.PlayerId == p.PlayerId));
             });
-            
+
             var socketMessage = new SocketMessage<CreateX01ScoreCommand> 
             { 
                 Message = request,
