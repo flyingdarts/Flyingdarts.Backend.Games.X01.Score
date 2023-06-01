@@ -33,8 +33,7 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
                 Body = JsonSerializer.Serialize(socketMessage)
             };
 
-        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Score, request.Input);
-
+        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score);
 
         var write = _dbContext.CreateBatchWrite<GameDart>(_applicationOptions.ToOperationConfig());
 
