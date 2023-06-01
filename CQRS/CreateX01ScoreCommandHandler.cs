@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System;
 
 public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreCommand, APIGatewayProxyResponse>
 {
@@ -33,7 +34,21 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
                 Body = JsonSerializer.Serialize(socketMessage)
             };
 
-        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score);
+
+        // begin calculate sets and legs possibly close game
+        var currentSet = request.Darts.Select(x=>x.Set).DefaultIfEmpty(1).Max();
+        var currentLeg = request.Darts.Select(x=>x.Leg).DefaultIfEmpty(1).Max();
+
+        if (request.Darts.OrderBy(x=>x.CreatedAt).Last().Score == 0) {
+            currentLeg++;
+            if (currentLeg > request.Game.X01.Legs) {
+                currentLeg = 1;
+                currentSet++;
+            }
+        }
+
+        // end of calculate sets and legs possibly close game
+        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score, currentSet, currentLeg);
 
         request.Darts.Add(gameDart);
         request.History = new();
@@ -45,12 +60,23 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
 
         request.NextToThrow = request.Players.First(x=>x.PlayerId != request.PlayerId).PlayerId;
 
+         if (request.Score == 0) {
+            if (currentLeg == request.Game.X01.Legs) {
+                if (currentSet == request.Game.X01.Sets) {
+                    request.Game.Status = GameStatus.Finished;
+                }
+            }
+        }
+
         var write = _dbContext.CreateBatchWrite<GameDart>(_applicationOptions.ToOperationConfig());
 
         write.AddPutItem(gameDart);
 
-        await write.ExecuteAsync(cancellationToken);
+        var gameWrite = _dbContext.CreateBatchWrite<Game>(_applicationOptions.ToOperationConfig());
 
+        gameWrite.AddPutItem(request.Game);
+
+        await write.Combine(gameWrite).ExecuteAsync(cancellationToken);
 
         return new APIGatewayProxyResponse
         {
