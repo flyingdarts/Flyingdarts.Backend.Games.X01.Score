@@ -18,11 +18,12 @@ public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
     internal List<User> Users { get; set; }
 
     public Dictionary<string, ScoreboardRecord> History { get; set; }
+    public string NextToThrow { get; set; }
 }
 
 
-public class ScoreboardRecord 
+public class ScoreboardRecord
 {
-    public int Score {get;set;}
-    public List<int> History {get;set;}
+    public int Score { get; set; }
+    public List<int> History { get; set; }
 }
