@@ -8,7 +8,7 @@ using Flyingdarts.Persistence;
 using Flyingdarts.Shared;
 using MediatR.Pipeline;
 using Microsoft.Extensions.Options;
-public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, IOptions<ApplicationOptions> ApplicationOptions) : IRequestPreProcessor<CreateX01ScoreCommand>
+public record CreateX01ScoreCommandFetchGameDataHandler(IDynamoDBContext DbContext, IOptions<ApplicationOptions> ApplicationOptions) : IRequestPreProcessor<CreateX01ScoreCommand>
 {
     public async Task Process(CreateX01ScoreCommand request, CancellationToken cancellationToken)
     {
@@ -22,7 +22,7 @@ public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, IOpti
     {
         var games = await DbContext.FromQueryAsync<Game>(QueryGameConfig(gameId.ToString()), ApplicationOptions.Value.ToOperationConfig())
             .GetRemainingAsync(cancellationToken);
-        return games.Where(x => x.Status == GameStatus.Qualifying).ToList().SingleOrDefault();
+        return games.Where(x => x.Status == GameStatus.Started).ToList().SingleOrDefault();
     }
 
     private async Task<List<GamePlayer>> GetGamePlayersAsync(long gameId, CancellationToken cancellationToken)

@@ -8,17 +8,8 @@ using System.Threading;
 using Amazon.DynamoDBv2.DocumentModel;
 using System.Linq;
 
-public class CreateX01ScoreCommandConnectionIdUpdater : IRequestPreProcessor<CreateX01ScoreCommand>
+public record CreateX01ScoreCommandUpdateConnectionIdHandler(IDynamoDBContext DbContext, IOptions<ApplicationOptions> ApplicationOptions) : IRequestPreProcessor<CreateX01ScoreCommand>
 {
-    private readonly IDynamoDBContext _dbContext;
-    private readonly IOptions<ApplicationOptions> _options;
-
-    public CreateX01ScoreCommandConnectionIdUpdater(IDynamoDBContext DbContext, IOptions<ApplicationOptions> ApplicationOptions)
-    {
-        _dbContext = DbContext;
-        _options = ApplicationOptions;
-    }
-
     public async Task Process(CreateX01ScoreCommand request, CancellationToken cancellationToken)
     {
         var user = await GetUserAsync(request.PlayerId, cancellationToken);
@@ -28,7 +19,7 @@ public class CreateX01ScoreCommandConnectionIdUpdater : IRequestPreProcessor<Cre
 
     private async Task UpdateUserAsync(User user, string connectionId, CancellationToken cancellationToken)
     {
-        var userWrite = _dbContext.CreateBatchWrite<User>(_options.Value.ToOperationConfig());
+        var userWrite = DbContext.CreateBatchWrite<User>(ApplicationOptions.Value.ToOperationConfig());
 
         user.ConnectionId = connectionId;
 
@@ -39,7 +30,7 @@ public class CreateX01ScoreCommandConnectionIdUpdater : IRequestPreProcessor<Cre
     
     private async Task<User> GetUserAsync(string userId, CancellationToken cancellationToken)
     {
-        var results = await _dbContext.FromQueryAsync<User>(QueryConfig(userId)).GetRemainingAsync(cancellationToken);
+        var results = await DbContext.FromQueryAsync<User>(QueryConfig(userId)).GetRemainingAsync(cancellationToken);
 
         return results.Single();
     }
