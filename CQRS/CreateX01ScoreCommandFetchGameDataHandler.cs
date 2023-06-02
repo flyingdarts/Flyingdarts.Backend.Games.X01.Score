@@ -14,13 +14,7 @@ public record CreateX01ScoreCommandFetchGameDataHandler(IDynamoDBContext DbConte
     public async Task Process(CreateX01ScoreCommand request, CancellationToken cancellationToken)
     {
         request.Game = await GetGameAsync(long.Parse(request.GameId), cancellationToken);
-        request.LambdaContext.Logger.LogInformation("Fetched a game");
-        request.LambdaContext.Logger.LogInformation($"{JsonSerializer.Serialize(request.Game)}");
-
         request.Players = await GetGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
-        request.LambdaContext.Logger.LogInformation("Fetched players");
-        request.LambdaContext.Logger.LogInformation($"{request.Players.Select(x=>x.PlayerId)}");
-
         request.Darts = await GetGameDartsAsync(long.Parse(request.GameId), cancellationToken);
         request.Users = await GetUsersAsync(request.Players.Select(x => x.PlayerId).ToArray(), cancellationToken);
     }
