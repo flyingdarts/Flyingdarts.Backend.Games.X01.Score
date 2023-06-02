@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DataModel;
@@ -14,13 +15,13 @@ public record CreateX01ScoreCommandFetchGameDataHandler(IDynamoDBContext DbConte
     {
         request.Game = await GetGameAsync(long.Parse(request.GameId), cancellationToken);
         request.LambdaContext.Logger.LogInformation("Fetched a game");
-        request.LambdaContext.Logger.LogInformation($"{request.Game.GameId}");
-        
-        request.Players = await GetGamePlayersAsync(request.Game.GameId, cancellationToken);
+        request.LambdaContext.Logger.LogInformation($"{JsonSerializer.Serialize(request.Game)}");
+
+        request.Players = await GetGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
         request.LambdaContext.Logger.LogInformation("Fetched players");
         request.LambdaContext.Logger.LogInformation($"{request.Players.Select(x=>x.PlayerId)}");
 
-        request.Darts = await GetGameDartsAsync(request.Game.GameId, cancellationToken);
+        request.Darts = await GetGameDartsAsync(long.Parse(request.GameId), cancellationToken);
         request.Users = await GetUsersAsync(request.Players.Select(x => x.PlayerId).ToArray(), cancellationToken);
     }
 
