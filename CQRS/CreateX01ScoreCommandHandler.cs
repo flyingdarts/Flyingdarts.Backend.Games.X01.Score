@@ -39,7 +39,7 @@ public class CreateX01ScoreCommandHandler : IRequestHandler<CreateX01ScoreComman
         var currentSet = request.Darts.Select(x=>x.Set).DefaultIfEmpty(1).Max();
         var currentLeg = request.Darts.Select(x=>x.Leg).DefaultIfEmpty(1).Max();
 
-        if (request.Darts.OrderBy(x=>x.CreatedAt).Last().Score == 0) {
+        if (request.Darts.Any() && request.Darts.OrderBy(x=>x.CreatedAt).Last().Score == 0) {
             currentLeg++;
             if (currentLeg > request.Game.X01.Legs) {
                 currentLeg = 1;
