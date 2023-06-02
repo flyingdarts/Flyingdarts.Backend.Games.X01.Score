@@ -22,7 +22,7 @@ public record CreateX01ScoreCommandGameFetcher(IDynamoDBContext DbContext, IOpti
     {
         var games = await DbContext.FromQueryAsync<Game>(QueryGameConfig(gameId.ToString()), ApplicationOptions.Value.ToOperationConfig())
             .GetRemainingAsync(cancellationToken);
-        return games.Where(x => x.Status == GameStatus.Qualifying).ToList().Single();
+        return games.Where(x => x.Status == GameStatus.Qualifying).ToList().SingleOrDefault();
     }
 
     private async Task<List<GamePlayer>> GetGamePlayersAsync(long gameId, CancellationToken cancellationToken)
