@@ -1,4 +1,5 @@
 using Amazon.Lambda.APIGatewayEvents;
+using Amazon.Lambda.Core;
 using Amazon.Lambda.RuntimeSupport;
 using Amazon.Lambda.Serialization.SystemTextJson;
 using Flyingdarts.Lambdas.Shared;
@@ -13,11 +14,17 @@ var innerHandler = new InnerHandler(services);
 var serializer = new DefaultLambdaJsonSerializer(x => x.PropertyNameCaseInsensitive = true);
 
 // Define the Lambda function handler
-var handler = async (APIGatewayProxyRequest request) =>
+var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
 {
     // Convert the APIGatewayProxyRequest to the specified CreateX01ScoreCommand type using the serializer
     var socketRequest = request.To<CreateX01ScoreCommand>(serializer);
+
+    // Add the connectionId to the request.
     socketRequest.Message.ConnectionId = request.RequestContext.ConnectionId;
+
+    // Pass the LambdaContext for logging.
+    socketRequest.Message.LambdaContext = context;
+    
     // Handle the socketRequest using the innerHandler
     return await innerHandler.Handle(socketRequest);
 };

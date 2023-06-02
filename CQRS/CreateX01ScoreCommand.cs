@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Amazon.Lambda.APIGatewayEvents;
+using Amazon.Lambda.Core;
 using Flyingdarts.Persistence;
 using MediatR;
 
@@ -16,7 +17,7 @@ public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
     internal List<GamePlayer> Players { get; set; }
     internal List<GameDart> Darts { get; set; }
     internal List<User> Users { get; set; }
-
+    internal ILambdaContext LambdaContext { get;set;}
     public Dictionary<string, ScoreboardRecord> History { get; set; }
     public string NextToThrow { get; set; }
 }
