@@ -5,6 +5,7 @@ using FluentValidation;
 using Flyingdarts.Shared;
 using Microsoft.Extensions.Configuration;
 using Amazon.ApiGatewayManagementApi;
+using Flyingdarts.Persistence;
 
 /// <summary>
 /// Factory class for creating the service provider.
@@ -34,7 +35,10 @@ public static class ServiceFactory
 
         // Register the DynamoDB context.
         services.AddTransient<IDynamoDBContext, DynamoDBContext>();
-
+        
+        // Register GameService with Reads and Writes.
+        services.AddTransient<IDynamoDbService, DynamoDbService>();
+        
         // Register validators from the assembly containing the CreateX01ScoreCommandValidator.
         services.AddValidatorsFromAssemblyContaining<CreateX01ScoreCommandValidator>();
 
