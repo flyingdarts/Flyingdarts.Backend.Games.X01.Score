@@ -20,14 +20,6 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
         socketMessage.Message = request;
         socketMessage.Action = "v2/games/x01/score";
 
-        if (request.Game == null)
-            return new APIGatewayProxyResponse
-            {
-                StatusCode = 200,
-                Body = JsonSerializer.Serialize(socketMessage)
-            };
-
-
         // begin calculate sets and legs possibly close game
         var currentSet = request.Darts.Select(x=>x.Set).DefaultIfEmpty(1).Max();
         var currentLeg = request.Darts.Select(x=>x.Leg).DefaultIfEmpty(1).Max();
