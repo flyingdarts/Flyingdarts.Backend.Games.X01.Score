@@ -32,15 +32,16 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
             }
         }
 
-        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score, currentSet, currentLeg);
-
-        await DynamoDbService.WriteGameDartAsync(gameDart, cancellationToken);
+       
 
         request.Game = await DynamoDbService.ReadGameAsync(long.Parse(request.GameId), cancellationToken);
         request.Players = await DynamoDbService.ReadGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
         request.Users = await DynamoDbService.ReadUsersAsync(request.Players.Select(x => x.PlayerId).ToArray(), cancellationToken);
         request.Darts = await DynamoDbService.ReadGameDartsAsync(long.Parse(request.GameId), cancellationToken);
+        var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score, currentSet, currentLeg);
 
+        await DynamoDbService.WriteGameDartAsync(gameDart, cancellationToken);
+        request.Darts.Add(gameDart);
         Metadata data = new Metadata();
 
         if (request.Game is not null)
