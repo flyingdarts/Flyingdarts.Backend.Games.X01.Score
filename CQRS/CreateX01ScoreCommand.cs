@@ -14,9 +14,8 @@ public class CreateX01ScoreCommand : IRequest<APIGatewayProxyResponse>
 
     internal string ConnectionId { get; set; }
     internal Game Game { get; set; }
-    internal List<GamePlayer> Players { get; set; }
-    internal List<GameDart> Darts { get; set; }
-    internal List<User> Users { get; set; }
+    internal List<GamePlayer> Players { get; set; } = new();
+    internal List<GameDart> Darts { get; set; } = new();
+    internal List<User> Users { get; set; } = new();
     internal ILambdaContext LambdaContext { get;set;}
-    public Dictionary<string, int[]> History { get; set; }
 }
