@@ -21,9 +21,6 @@ var handler = async (APIGatewayProxyRequest request, ILambdaContext context) =>
 
     // Add the connectionId to the request.
     socketRequest.Message.ConnectionId = request.RequestContext.ConnectionId;
-
-    // Pass the LambdaContext for logging.
-    socketRequest.Message.LambdaContext = context;
     
     // Handle the socketRequest using the innerHandler
     return await innerHandler.Handle(socketRequest);
