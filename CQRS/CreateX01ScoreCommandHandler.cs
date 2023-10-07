@@ -22,18 +22,20 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
         socketMessage.Action = "v2/games/x01/score";
 
         // begin calculate sets and legs possibly close game
-        var currentSet = request.Darts.Select(x=>x.Set).DefaultIfEmpty(1).Max();
-        var currentLeg = request.Darts.Select(x=>x.Leg).DefaultIfEmpty(1).Max();
+        var currentSet = request.Darts.Select(x => x.Set).DefaultIfEmpty(1).Max();
+        var currentLeg = request.Darts.Select(x => x.Leg).DefaultIfEmpty(1).Max();
 
-        if (request.Darts.Any() && request.Darts.OrderBy(x=>x.CreatedAt).Last().Score == 0) {
+        if (request.Darts.Any() && request.Darts.OrderBy(x => x.CreatedAt).Last().Score == 0)
+        {
             currentLeg++;
-            if (currentLeg > request.Game.X01.Legs) {
+            if (currentLeg > request.Game.X01.Legs)
+            {
                 currentLeg = 1;
                 currentSet++;
             }
         }
 
-       
+
 
         request.Game = await DynamoDbService.ReadGameAsync(long.Parse(request.GameId), cancellationToken);
         request.Players = await DynamoDbService.ReadGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
@@ -105,25 +107,10 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
         Dictionary<string, List<DartDto>> darts = metadata.Darts;
 
         // Create a dictionary to keep track of the number of darts thrown by each player.
-        Dictionary<string, int> dartsThrownByPlayer = new Dictionary<string, int>();
-
-        // Initialize the dartsThrownByPlayer dictionary with 0 darts for each player.
-        foreach (var player in metadata.Players)
-        {
-            dartsThrownByPlayer[player.PlayerId] = 0;
-        }
-
-        // Calculate the total number of darts thrown by each player.
-        foreach (var playerDarts in darts.Values)
-        {
-            foreach (var dart in playerDarts)
-            {
-                if (dartsThrownByPlayer.ContainsKey(dart.PlayerId))
-                {
-                    dartsThrownByPlayer[dart.PlayerId]++;
-                }
-            }
-        }
+        Dictionary<string, int> dartsThrownByPlayer = darts
+            .SelectMany(kv => kv.Value, (key, value) => new { Player = key.Key, Dart = value })
+            .GroupBy(x => x.Player)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         // Find the player with the lowest number of darts thrown.
         string nextPlayer = dartsThrownByPlayer.OrderBy(x => x.Value).FirstOrDefault().Key;
