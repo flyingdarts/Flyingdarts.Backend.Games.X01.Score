@@ -23,6 +23,7 @@ public record CreateX01ScoreCommandNotifyRoomHandler(IDynamoDBContext DbContext,
             Message = request,
             Action = "v2/games/x01/score"
         };
+        socketMessage.Metadata = CreateX01ScoreCommandHandler.CreateMetaData(request.Game, request.Darts, request.Players, request.Users);
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(socketMessage)));
 

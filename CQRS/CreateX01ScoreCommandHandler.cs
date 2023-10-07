@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using Amazon.Runtime.Internal;
 
 public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : IRequestHandler<CreateX01ScoreCommand, APIGatewayProxyResponse>
 {
@@ -20,6 +21,12 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
         var socketMessage = new SocketMessage<CreateX01ScoreCommand>();
         socketMessage.Message = request;
         socketMessage.Action = "v2/games/x01/score";
+
+        request.Game = await DynamoDbService.ReadGameAsync(long.Parse(request.GameId), cancellationToken);
+        request.Players = await DynamoDbService.ReadGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
+        request.Users = await DynamoDbService.ReadUsersAsync(request.Players.Select(x => x.PlayerId).ToArray(), cancellationToken);
+        request.Darts = await DynamoDbService.ReadGameDartsAsync(long.Parse(request.GameId), cancellationToken);
+
 
         // begin calculate sets and legs possibly close game
         var currentSet = request.Darts.Select(x => x.Set).DefaultIfEmpty(1).Max();
@@ -35,56 +42,71 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
             }
         }
 
-
-
-        request.Game = await DynamoDbService.ReadGameAsync(long.Parse(request.GameId), cancellationToken);
-        request.Players = await DynamoDbService.ReadGamePlayersAsync(long.Parse(request.GameId), cancellationToken);
-        request.Users = await DynamoDbService.ReadUsersAsync(request.Players.Select(x => x.PlayerId).ToArray(), cancellationToken);
-        request.Darts = await DynamoDbService.ReadGameDartsAsync(long.Parse(request.GameId), cancellationToken);
         var gameDart = GameDart.Create(request.Game.GameId, request.PlayerId, request.Input, request.Score, currentSet, currentLeg);
 
         await DynamoDbService.WriteGameDartAsync(gameDart, cancellationToken);
+
         request.Darts.Add(gameDart);
+
+        socketMessage.Metadata = CreateMetaData(request.Game, request.Darts, request.Players, request.Users);
+
+        return new APIGatewayProxyResponse
+        {
+            StatusCode = 200,
+            Body = JsonSerializer.Serialize(socketMessage)
+        };
+    }
+    public static Dictionary<string, object> CreateMetaData(Game game, List<GameDart> darts, List<GamePlayer> players, List<User> users)
+    {
         Metadata data = new Metadata();
 
-        if (request.Game is not null)
+        if (game is not null)
         {
             data.Game = new GameDto
             {
-                Id = request.Game.GameId.ToString(),
-                PlayerCount = request.Game.PlayerCount,
-                Status = (GameStatusDto)(int)request.Game.Status,
-                Type = (GameTypeDto)(int)request.Game.Type,
+                Id = game.GameId.ToString(),
+                PlayerCount = game.PlayerCount,
+                Status = (GameStatusDto)(int)game.Status,
+                Type = (GameTypeDto)(int)game.Type,
                 X01 = new X01GameSettingsDto
                 {
-                    DoubleIn = request.Game.X01.DoubleIn,
-                    DoubleOut = request.Game.X01.DoubleOut,
-                    Legs = request.Game.X01.Legs,
-                    Sets = request.Game.X01.Sets,
-                    StartingScore = request.Game.X01.StartingScore
+                    DoubleIn = game.X01.DoubleIn,
+                    DoubleOut = game.X01.DoubleOut,
+                    Legs = game.X01.Legs,
+                    Sets = game.X01.Sets,
+                    StartingScore = game.X01.StartingScore
                 }
             };
         }
 
-        if (request.Darts is not null)
+        if (darts is not null)
         {
             data.Darts = new();
-            request.Players.ForEach(p =>
+            players.ForEach(p =>
             {
                 data.Darts.Add(p.PlayerId, new());
-                data.Darts[p.PlayerId] = request.Darts.OrderBy(x => x.CreatedAt).Where(x => x.PlayerId == p.PlayerId).Select(x => new DartDto { Id = x.Id, Score = x.Score, GameScore = x.GameScore }).ToList();
+                data.Darts[p.PlayerId] = darts
+                    .OrderBy(x => x.CreatedAt)
+                    .Where(x => x.PlayerId == p.PlayerId)
+                    .Select(x => new DartDto
+                    {
+                        Id = x.Id,
+                        Score = x.Score,
+                        GameScore = x.GameScore
+                    })
+                    .ToList();
             });
         }
 
-        if (request.Players is not null)
+        if (players is not null)
         {
-            var orderedPlayers = request.Players.Select(x =>
+            var orderedPlayers = players.Select(x =>
             {
                 return new PlayerDto
                 {
                     PlayerId = x.PlayerId,
-                    PlayerName = request.Users.Single(y => y.UserId == x.PlayerId).Profile.UserName,
-                    Country = request.Users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
+                    PlayerName = users.Single(y => y.UserId == x.PlayerId).Profile.UserName,
+                    Country = users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
                     CreatedAt = x.PlayerId
                 };
             }).OrderBy(x => x.CreatedAt);
@@ -94,15 +116,9 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
 
         DetermineNextPlayer(data);
 
-        socketMessage.Metadata = data.toDictionary();
-
-        return new APIGatewayProxyResponse
-        {
-            StatusCode = 200,
-            Body = JsonSerializer.Serialize(socketMessage)
-        };
+        return data.toDictionary();
     }
-    public void DetermineNextPlayer(Metadata metadata)
+    public static void DetermineNextPlayer(Metadata metadata)
     {
         if (metadata.Players.Count() == 2)
         {
@@ -118,5 +134,4 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
             }
         }
     }
-
 }
