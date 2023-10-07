@@ -1,20 +1,18 @@
 ﻿using System.Linq;
-using Amazon.DynamoDBv2.DataModel;
-using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.Lambda.APIGatewayEvents;
 using Flyingdarts.Lambdas.Shared;
 using Flyingdarts.Persistence;
-using Flyingdarts.Shared;
 using MediatR;
-using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System;
 using System.Collections.Generic;
-using Amazon.Runtime.Internal;
+using Amazon.ApiGatewayManagementApi.Model;
+using System.IO;
+using System.Text;
+using Amazon.ApiGatewayManagementApi;
 
-public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : IRequestHandler<CreateX01ScoreCommand, APIGatewayProxyResponse>
+public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAmazonApiGatewayManagementApi ApiGatewayClient) : IRequestHandler<CreateX01ScoreCommand, APIGatewayProxyResponse>
 {
     public async Task<APIGatewayProxyResponse> Handle(CreateX01ScoreCommand request, CancellationToken cancellationToken)
     {
@@ -50,11 +48,36 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
 
         socketMessage.Metadata = CreateMetaData(request.Game, request.Darts, request.Players, request.Users);
 
+        await NotifyRoomAsync(socketMessage, cancellationToken);
+
         return new APIGatewayProxyResponse
         {
             StatusCode = 200,
             Body = JsonSerializer.Serialize(socketMessage)
         };
+    }
+    public async Task NotifyRoomAsync(SocketMessage<CreateX01ScoreCommand> message, CancellationToken cancellationToken)
+    {
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message)));
+
+        foreach (var user in message.Message.Users)
+        {
+            if (!string.IsNullOrEmpty(user.ConnectionId))
+            {
+                var connectionId = user.UserId == message.Message.PlayerId
+                    ? message.Message.ConnectionId : user.ConnectionId;
+
+                var postConnectionRequest = new PostToConnectionRequest
+                {
+                    ConnectionId = connectionId,
+                    Data = stream
+                };
+
+                stream.Position = 0;
+
+                await ApiGatewayClient.PostToConnectionAsync(postConnectionRequest, cancellationToken);
+            }
+        }
     }
     public static Dictionary<string, object> CreateMetaData(Game game, List<GameDart> darts, List<GamePlayer> players, List<User> users)
     {
@@ -130,7 +153,7 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
             }
             else
             {
-                metadata.NextPlayer = metadata.Players.Last().PlayerId;
+                metadata.NextPlayer = metadata.Players.First().PlayerId;
             }
         }
     }
