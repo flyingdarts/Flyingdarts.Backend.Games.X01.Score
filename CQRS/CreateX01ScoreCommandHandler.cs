@@ -80,7 +80,9 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService) : I
                 return new PlayerDto
                 {
                     PlayerId = x.PlayerId,
-                    PlayerName = request.Users.Single(y => y.UserId == x.PlayerId).Profile.UserName
+                    PlayerName = request.Users.Single(y => y.UserId == x.PlayerId).Profile.UserName,
+                    Country = request.Users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
+                    CreatedAt = long.Parse(x.PlayerId)
                 };
             }).OrderBy(x => x.CreatedAt);
 
