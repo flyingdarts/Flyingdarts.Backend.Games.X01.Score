@@ -40,7 +40,7 @@ public static class ServiceFactory
         services.AddTransient<IDynamoDbService, DynamoDbService>();
 
         // Register validators from the assembly containing the CreateX01ScoreCommandValidatorr.
-        services.AddValidatorsFromAssemblyContaining<CreateX01ScoreCommandValidatorr>();
+        services.AddValidatorsFromAssemblyContaining<CreateX01ScoreCommandValidator>();
 
         // Register MediatR and register services from the assembly containing CreateX01ScoreCommand.
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateX01ScoreCommand).Assembly));
