@@ -121,6 +121,9 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                         CreatedAt = x.CreatedAt.Ticks
                     })
                     .ToList();
+                var index = data.Darts[p.PlayerId].FindLastIndex(x => x.GameScore == 0);
+
+                data.Darts[p.PlayerId] = data.Darts[p.PlayerId].Skip(index).ToList();
             });
         }
 
