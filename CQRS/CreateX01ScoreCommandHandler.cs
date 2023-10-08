@@ -115,7 +115,10 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                     {
                         Id = x.Id,
                         Score = x.Score,
-                        GameScore = x.GameScore
+                        GameScore = x.GameScore,
+                        Set = x.Set,
+                        Leg= x.Leg,
+                        CreatedAt = x.CreatedAt.Ticks
                     })
                     .ToList();
             });
@@ -130,7 +133,9 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                     PlayerId = x.PlayerId,
                     PlayerName = users.Single(y => y.UserId == x.PlayerId).Profile.UserName,
                     Country = users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
-                    CreatedAt = x.PlayerId
+                    CreatedAt = x.PlayerId,
+                    Legs = CalculateLegs(data, x.PlayerId),
+                    Sets = CalculateSets(data, x.PlayerId)
                 };
             }).OrderBy(x => x.CreatedAt);
 
@@ -140,6 +145,25 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         DetermineNextPlayer(data);
 
         return data.toDictionary();
+    }
+    public static string CalculateLegs(Metadata metadata, string playerId)
+    {
+        var dart = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Last();
+        if (dart.GameScore == 0)
+        {
+            if (dart.Leg + 1 >= metadata.Game.X01.Legs)
+            {
+                return (0).ToString();
+            }
+            return (dart.Leg + 1).ToString();
+        }
+
+        return (dart.Leg).ToString();
+    }
+    public static string CalculateSets(Metadata metadata, string playerId)
+    {
+        var darts = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Where(x=>x.GameScore == 0);
+        return (darts.Count() / metadata.Game.X01.Legs).ToString();
     }
     public static void DetermineNextPlayer(Metadata metadata)
     {
