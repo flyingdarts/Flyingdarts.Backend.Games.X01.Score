@@ -121,9 +121,6 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                         CreatedAt = x.CreatedAt.Ticks
                     })
                     .ToList();
-                var index = data.Darts[p.PlayerId].FindLastIndex(x => x.GameScore == 0);
-
-                data.Darts[p.PlayerId] = data.Darts[p.PlayerId].Skip(index).ToList();
             });
         }
 
@@ -147,6 +144,16 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
 
         DetermineNextPlayer(data);
 
+        try
+        {
+            var lastFinisher = darts!.OrderBy(x => x.CreatedAt).Last(x => x.GameScore == 0);
+            data.Darts[data.Darts.Keys.First()] =
+                data.Darts[data.Darts.Keys.First()].Where(x => x.CreatedAt > lastFinisher.CreatedAt.Ticks).ToList();
+
+            data.Darts[data.Darts.Keys.Last()] =
+                data.Darts[data.Darts.Keys.Last()].Where(x => x.CreatedAt > lastFinisher.CreatedAt.Ticks).ToList();
+        } catch { }
+        
         return data.toDictionary();
     }
     public static string CalculateLegs(Metadata metadata, string playerId)
