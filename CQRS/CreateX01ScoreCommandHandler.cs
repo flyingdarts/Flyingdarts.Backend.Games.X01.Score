@@ -158,8 +158,17 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
     }
     public static string CalculateLegs(Metadata metadata, string playerId)
     {
-        var darts = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Where(x => x.GameScore == 0);
-        return darts.Count().ToString();
+        var dart = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Last();
+        if (dart.GameScore == 0)
+        {
+            if (dart.Leg + 1 >= metadata.Game.X01.Legs)
+            {
+                return (0).ToString();
+            }
+            return (dart.Leg + 1).ToString();
+        }
+
+        return (dart.Leg).ToString();
     }
     public static string CalculateSets(Metadata metadata, string playerId)
     {
