@@ -49,6 +49,11 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
 
         socketMessage.Metadata = CreateMetaData(request.Game, request.Darts, request.Players, request.Users);
 
+        if (HasPlayerWon(request.Darts, request.PlayerId, request.Game.X01.Legs, request.Game.X01.Sets))
+        {
+            socketMessage.Metadata!["NextPlayer"] = null;
+        }
+        
         await NotifyRoomAsync(socketMessage, cancellationToken);
 
         return new APIGatewayProxyResponse
@@ -136,13 +141,13 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                     Country = users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
                     CreatedAt = x.PlayerId,
                     Legs = CalculateLegs(darts!, x.PlayerId).ToString(),
-                    Sets = CalculateSets(darts!, x.PlayerId).ToString()
+                    Sets = CalculateSets(darts!, x.PlayerId, data.Game.X01.Legs).ToString()
                 };
             }).OrderBy(x => x.CreatedAt);
             
             data.Players = orderedPlayers;
-        }
-
+        }       
+        
         DetermineNextPlayer(data);
 
         try
@@ -158,25 +163,60 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         return data.toDictionary();
     }
 
-    public static int CalculateLegs(List<GameDart> darts, string playerId, int legs = 3)
+    public static int CalculateLegs(List<GameDart> darts, string playerId)
     {
-        int totalLegsWon = darts.Count(x => x.PlayerId == playerId && x.GameScore == 0);
-        if (Math.Round((decimal)legs / 2) == totalLegsWon)
+        // Group darts by set and then by player.
+        var sets = darts.GroupBy(dart => dart.Set);
+
+        int totalLegsWon = 0;
+
+        // Calculate legs won in each set
+        foreach (var set in sets)
         {
-            return 0;
-        }
-        return totalLegsWon;
-    }
-    public static int CalculateSets(List<GameDart> darts, string playerId, int legs = 3, int sets = 1)
-    {
-        int totalLegsWon = darts.Count(x => x.PlayerId == playerId && x.GameScore == 0);
-        if (Math.Round((decimal)legs / 2) == totalLegsWon)
-        {
-            return 1;
+            var legsInSet = set.GroupBy(dart => dart.Leg);
+            foreach (var leg in legsInSet)
+            {
+                // Check if the player has won the leg by being the first to finish (score of 0)
+                if (leg.Any(dart => dart.PlayerId == playerId && dart.GameScore == 0))
+                {
+                    totalLegsWon++;
+                }
+            }
         }
 
-        return 0;
+        return totalLegsWon;
     }
+
+    public static int CalculateSets(List<GameDart> darts, string playerId, int legsPerSet)
+    {
+        // Group darts by set
+        var sets = darts.GroupBy(dart => dart.Set);
+
+        int totalSetsWon = 0;
+
+        // Calculate sets won
+        foreach (var set in sets)
+        {
+            int legsWonInCurrentSet = CalculateLegs(set.ToList(), playerId);
+            if (legsWonInCurrentSet >= ((legsPerSet / 2) + 1)) // If the player has won the majority of the legs in the set
+            {
+                totalSetsWon++;
+            }
+        }
+
+        return totalSetsWon;
+    }
+
+    public static bool HasPlayerWon(List<GameDart> darts, string playerId, int legsRequired, int bestOfSets)
+    {
+        int setsWon = CalculateSets(darts, playerId, legsRequired);
+    
+        int setsRequiredToWin = (bestOfSets + 1) / 2;
+    
+        // If the player has won the required number of sets in a "best of" scenario, they've won the game.
+        return setsWon >= setsRequiredToWin;
+    }
+
     public static void DetermineNextPlayer(Metadata metadata)
     {
         if (metadata.Players.Count() == 2)
