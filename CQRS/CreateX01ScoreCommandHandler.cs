@@ -134,7 +134,7 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                     PlayerName = users.Single(y => y.UserId == x.PlayerId).Profile.UserName,
                     Country = users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
                     CreatedAt = x.PlayerId,
-                    Legs = CalculateLegs(data, x.PlayerId),
+                    Legs = CalculateLegs(darts!, x.PlayerId),
                     Sets = CalculateSets(data, x.PlayerId)
                 };
             }).OrderBy(x => x.CreatedAt);
@@ -156,12 +156,12 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         
         return data.toDictionary();
     }
-    public static string CalculateLegs(Metadata metadata, string playerId)
+    public static string CalculateLegs(List<GameDart> darts, string playerId, int legs = 3)
     {
-        var dart = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Last();
+        var dart = darts.Where(x=>x.PlayerId == playerId).OrderBy(x => x.CreatedAt).Last();
         if (dart.GameScore == 0)
         {
-            if (dart.Leg + 1 >= metadata.Game.X01.Legs)
+            if (dart.Leg + 1 >= legs)
             {
                 return (0).ToString();
             }
