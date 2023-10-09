@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Amazon.Lambda.APIGatewayEvents;
 using Flyingdarts.Lambdas.Shared;
 using Flyingdarts.Persistence;
@@ -30,7 +31,7 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         var currentSet = request.Darts.Select(x => x.Set).DefaultIfEmpty(1).Max();
         var currentLeg = request.Darts.Select(x => x.Leg).DefaultIfEmpty(1).Max();
 
-        if (request.Darts.Any() && request.Darts.OrderBy(x => x.CreatedAt).Last().Score == 0)
+        if (request.Darts.Any() && request.Darts.OrderBy(x => x.CreatedAt).Last().GameScore == 0)
         {
             currentLeg++;
             if (currentLeg > request.Game.X01.Legs)
@@ -134,8 +135,8 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                     PlayerName = users.Single(y => y.UserId == x.PlayerId).Profile.UserName,
                     Country = users.Single(y => y.UserId == x.PlayerId).Profile.Country.ToLower(),
                     CreatedAt = x.PlayerId,
-                    Legs = CalculateLegs(darts!, x.PlayerId),
-                    Sets = CalculateSets(data, x.PlayerId)
+                    Legs = CalculateLegs(darts!, x.PlayerId).ToString(),
+                    Sets = CalculateSets(darts!, x.PlayerId).ToString()
                 };
             }).OrderBy(x => x.CreatedAt);
             
@@ -157,14 +158,24 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         return data.toDictionary();
     }
 
-    public static string CalculateLegs(List<GameDart> darts, string playerId, int legs = 3) =>
-        darts.Count(x => x.PlayerId == playerId && x.GameScore == 0).ToString();
-    public static string CalculateSets(Metadata metadata, string playerId)
+    public static int CalculateLegs(List<GameDart> darts, string playerId, int legs = 3)
     {
-        var darts = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Where(x => x.GameScore == 0);
-        if (darts.Count() < metadata.Game.X01.Legs)
-            return 0.ToString();
-        return (darts.Count() / metadata.Game.X01.Legs).ToString();
+        int totalLegsWon = darts.Count(x => x.PlayerId == playerId && x.GameScore == 0);
+        if (Math.Round((decimal)legs / 2) == totalLegsWon)
+        {
+            return 0;
+        }
+        return totalLegsWon;
+    }
+    public static int CalculateSets(List<GameDart> darts, string playerId, int legs = 3, int sets = 1)
+    {
+        int totalLegsWon = darts.Count(x => x.PlayerId == playerId && x.GameScore == 0);
+        if (Math.Round((decimal)legs / 2) == totalLegsWon)
+        {
+            return 1;
+        }
+
+        return 0;
     }
     public static void DetermineNextPlayer(Metadata metadata)
     {
@@ -182,4 +193,8 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
             }
         }
     }
+}
+
+public class CurrentSetFinishedException : Exception
+{
 }
