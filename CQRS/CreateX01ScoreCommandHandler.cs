@@ -138,7 +138,7 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
                     Sets = CalculateSets(data, x.PlayerId)
                 };
             }).OrderBy(x => x.CreatedAt);
-
+            
             data.Players = orderedPlayers;
         }
 
@@ -156,20 +156,9 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         
         return data.toDictionary();
     }
-    public static string CalculateLegs(List<GameDart> darts, string playerId, int legs = 3)
-    {
-        var dart = darts.Where(x=>x.PlayerId == playerId).OrderBy(x => x.CreatedAt).Last();
-        if (dart.GameScore == 0)
-        {
-            if (dart.Leg + 1 >= legs)
-            {
-                return (0).ToString();
-            }
-            return (dart.Leg + 1).ToString();
-        }
 
-        return (dart.Leg).ToString();
-    }
+    public static string CalculateLegs(List<GameDart> darts, string playerId, int legs = 3) =>
+        darts.Count(x => x.PlayerId == playerId && x.GameScore == 0).ToString();
     public static string CalculateSets(Metadata metadata, string playerId)
     {
         var darts = metadata.Darts[playerId].OrderBy(x => x.CreatedAt).Where(x => x.GameScore == 0);
