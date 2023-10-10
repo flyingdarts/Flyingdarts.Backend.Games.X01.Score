@@ -52,6 +52,10 @@ public record CreateX01ScoreCommandHandler(IDynamoDbService DynamoDbService, IAm
         if (HasPlayerWon(request.Darts, request.PlayerId, request.Game.X01.Legs, request.Game.X01.Sets))
         {
             socketMessage.Metadata!["NextPlayer"] = null;
+
+            request.Game.Status = GameStatus.Finished;
+
+            await DynamoDbService.WriteGameAsync(request.Game, cancellationToken);
         }
         
         await NotifyRoomAsync(socketMessage, cancellationToken);
